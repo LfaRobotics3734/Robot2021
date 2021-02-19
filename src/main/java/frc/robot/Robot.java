@@ -10,7 +10,30 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.Timer;
+/*travel certain distances to pick balls  up and also intake
+and turn degrees
 
+network tables closest ball is on right or left
+if right:
+  Path A
+if left:
+  Path B
+
+motor encoder returns distance traveled
+motor.set(0.5,0.5)
+if(distance>target){
+  motor.set(0.0,0.0)
+  encoder.set
+}
+
+navx returns current angle
+
+if(currentangle > angle){
+  motor.set(0.0, 0.0)
+}else{
+  motor.set(-0.5,0.5)
+}
+INTAKE*/
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
  * each mode, as described in the TimedRobot documentation. If you change the name of this class or
@@ -19,7 +42,7 @@ import edu.wpi.first.wpilibj.Timer;
  */
 public class Robot extends TimedRobot {
 
-  private final Joystick stick = new Joystick(1);
+  private Joystick stick;
   private final Timer m_timer = new Timer();
   private VictorSPX motorFrontL, motorFrontR, motorBackL, motorBackR; 
   private VictorSP shooter;
@@ -31,19 +54,28 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    //JOYSTICK in PORT 1, check FRC driver station
+    stick = new Joystick(1);
+
+    //DRIVING MOTORS
     motorFrontR = new VictorSPX(0);
     motorFrontL = new VictorSPX(1);
     motorBackL = new VictorSPX(2);
     motorBackR = new VictorSPX(3);
-    elevator = new VictorSPX(5);
-    intake = new VictorSPX(6);
+
+    //SHOOTER MOTOR
     shooter = new VictorSP(4);
+
+    //ELEVATOR MOTOR
+    elevator = new VictorSPX(5);
+
+    //INTAKE MOTOR
+    intake = new VictorSPX(6);
   }
 
   /** This function is run once each time the robot enters autonomous mode. */
   @Override
-  public void autonomousInit() {
-  }
+  public void autonomousInit() {}
 
   /** This function is called periodically during autonomous. */
   @Override
@@ -51,7 +83,9 @@ public class Robot extends TimedRobot {
 
   /** This function is called once each time the robot enters teleoperated mode. */
   @Override
-  public void teleopInit() {}
+  public void teleopInit() {
+    System.out.println(m_timer.get());
+  }
 
   /** This function is called periodically during teleoperated mode. */
   @Override
@@ -86,7 +120,7 @@ public class Robot extends TimedRobot {
       intake.set(ControlMode.PercentOutput, 0);
     }
 
-    //DRIVING CONTROLS
+    //DRIVING CODE
     double x = 0, y = 0, z = 0;
 
     if (!(stick.getX() < 0.2 && stick.getX() > -0.2)) {
@@ -117,6 +151,19 @@ public class Robot extends TimedRobot {
     motorFrontR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[1] / (wMax*1.7 )));
     motorBackL.set(ControlMode.PercentOutput, maxSpeedCheck(w[2] / (wMax*1.7 )));
     motorBackR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[3] / (wMax*1.7 )));
+
+    //X to move shooter for 3 seconds
+    if(stick.getRawButton(3)){
+      m_timer.reset();
+      m_timer.start();
+      shooter.set(-0.5);
+    }
+
+    if(m_timer.get() >= 3.0){
+      m_timer.stop();
+      m_timer.reset();
+      shooter.set(0);
+    }
   }
 
   /** This function is called once each time the robot enters test mode. */
