@@ -1,53 +1,36 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot;
 
+import com.kauailabs.navx.frc.AHRS;
 import com.ctre.phoenix.motorcontrol.*;
 import com.ctre.phoenix.motorcontrol.can.*;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.Timer;
-/*travel certain distances to pick balls  up and also intake
-and turn degrees
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.EntryListenerFlags;
 
-network tables closest ball is on right or left
-if right:
-  Path A
-if left:
-  Path B
-
-motor encoder returns distance traveled
-motor.set(0.5,0.5)
-if(distance>target){
-  motor.set(0.0,0.0)
-  encoder.set
-}
-
-navx returns current angle
-
-if(currentangle > angle){
-  motor.set(0.0, 0.0)
-}else{
-  motor.set(-0.5,0.5)
-}
-INTAKE*/
-/**
- * The VM is configured to automatically run this class, and to call the functions corresponding to
- * each mode, as described in the TimedRobot documentation. If you change the name of this class or
- * the package after creating this project, you must also update the manifest file in the resource
- * directory.
- */
 public class Robot extends TimedRobot {
 
   private Joystick stick;
-  private final Timer m_timer = new Timer();
-  private VictorSPX motorFrontL, motorFrontR, motorBackL, motorBackR; 
+  private final Timer mytimer = new Timer();
+  private VictorSPX motorFrontL, motorFrontR, motorBackL, motorBackR, elevator, intake; 
   private VictorSP shooter;
-  private VictorSPX elevator, intake;
+  private double shooterSpeed = -0.65;
+  private AHRS ahrs;
 
+  private double distance;
+  private int orientation;
+  //if turn:
+  // + deg is right
+  // - deg is left
+  private AutonomousCommands[] autonomousIntakeChallenge = new AutonomousCommands[]{
+    new AutonomousCommands("move", 3.0),
+    new AutonomousCommands("turn", 90)
+  };
+  private int currentCommand;
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -71,37 +54,99 @@ public class Robot extends TimedRobot {
 
     //INTAKE MOTOR
     intake = new VictorSPX(6);
+
+    //NETWORK TABLES
+
+    //get the default instance of NetworkTables
+    NetworkTableInstance inst = NetworkTableInstance.getDefault();
+
+    //get a reference to the subtable called "datatable"
+    NetworkTable table = inst.getTable("Vision");
+
+    //get a reference to key in "datatable" called "Y"
+    NetworkTableEntry orientationEntry = table.getEntry("orientation");
+
+    //add an entry listener for changed values of "X", the lambda ("->" operator)
+    //defines the code that should run when "X" changes
+    table.addEntryListener("distance", (tab, key, entry, value, flags) -> {
+        distance = Double.parseDouble(value.getValue().toString());
+    }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
+
+    //add an entry listener for changed values of "Y", the lambda ("->" operator)
+    //defines the code that should run when "Y" changes
+    orientationEntry.addListener(event -> {
+        orientation=Integer.parseInt(event.value.getValue().toString());
+    }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
+
   }
 
   /** This function is run once each time the robot enters autonomous mode. */
   @Override
-  public void autonomousInit() {}
+  public void autonomousInit() {
+    currentCommand = 0;
+    mytimer.reset();
+    mytimer.start();
+  }
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+    //change if statement to whatever length of array is
+    if(currentCommand < 2){
+      if(autonomousIntakeChallenge[currentCommand].getCommandType() == "move"){
+        if(mytimer.get() >= 1.0){
+          currentCommand++;
+          mytimer.reset();
+        } else {
+          motorFrontL.set(ControlMode.PercentOutput, 0.2);
+          motorFrontR.set(ControlMode.PercentOutput, -0.2);
+          motorBackL.set(ControlMode.PercentOutput, 0.2);
+          motorBackR.set(ControlMode.PercentOutput, -0.2);
+        }
+      } else {
+        if(mytimer.get() >= 1.0){
+          currentCommand++;
+          mytimer.reset();
+        } else {
+          motorFrontL.set(ControlMode.PercentOutput, 0.2);
+          motorFrontR.set(ControlMode.PercentOutput, 0.2);
+          motorBackL.set(ControlMode.PercentOutput, 0.2);
+          motorBackR.set(ControlMode.PercentOutput, 0.2);
+        }
+      }
+    }
+  }
 
   /** This function is called once each time the robot enters teleoperated mode. */
   @Override
-  public void teleopInit() {
-    System.out.println(m_timer.get());
-  }
+  public void teleopInit() {}
 
   /** This function is called periodically during teleoperated mode. */
   @Override
   public void teleopPeriodic() {
 
-    //SHOOTER
+    //SHOOTER -------------------------------------------------------------------------
     //R1 to shoot
     //Y to stop
     if (stick.getRawButton(6)){
-      shooter.set(-0.80);
+      shooter.set(shooterSpeed);
     }
     if(stick.getRawButton(4)){
       shooter.set(0);
     }
 
-    //ELEVATOR
+    //Using the D-PAD to control speed of shooter
+    if(stick.getPOV() == 0){
+      shooterSpeed = -0.65;
+    } else if(stick.getPOV() == 90){
+      shooterSpeed = -0.63;
+    } else if(stick.getPOV() == 180){
+      shooterSpeed = -0.705;
+    } else if(stick.getPOV() == 270){
+      shooterSpeed = -0.805;
+    }
+
+    //ELEVATOR ------------------------------------------------------------------------
     //L1 to Elevator
     if (stick.getRawButton(5)) {
       elevator.set(ControlMode.PercentOutput, -0.55);
@@ -109,7 +154,7 @@ public class Robot extends TimedRobot {
       elevator.set(ControlMode.PercentOutput, 0);
     }
 
-    //INTAKE
+    //INTAKE --------------------------------------------------------------------------
     //A to intake
     //B to reverse intake if Ball is stuck
     if (stick.getRawButton(1)) {
@@ -120,7 +165,7 @@ public class Robot extends TimedRobot {
       intake.set(ControlMode.PercentOutput, 0);
     }
 
-    //DRIVING CODE
+    //DRIVING CODE --------------------------------------------------------------------
     double x = 0, y = 0, z = 0;
 
     if (!(stick.getX() < 0.2 && stick.getX() > -0.2)) {
@@ -151,19 +196,6 @@ public class Robot extends TimedRobot {
     motorFrontR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[1] / (wMax*1.7 )));
     motorBackL.set(ControlMode.PercentOutput, maxSpeedCheck(w[2] / (wMax*1.7 )));
     motorBackR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[3] / (wMax*1.7 )));
-
-    //X to move shooter for 3 seconds
-    if(stick.getRawButton(3)){
-      m_timer.reset();
-      m_timer.start();
-      shooter.set(-0.5);
-    }
-
-    if(m_timer.get() >= 3.0){
-      m_timer.stop();
-      m_timer.reset();
-      shooter.set(0);
-    }
   }
 
   /** This function is called once each time the robot enters test mode. */
@@ -180,5 +212,9 @@ public class Robot extends TimedRobot {
     } else {
       return inputSpeed;
     }
+  }
+
+  public double unitToDistance(double pos){
+    return (pos/4096)/* * wheelCircumference */;
   }
 }
