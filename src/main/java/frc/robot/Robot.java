@@ -11,12 +11,14 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.EntryListenerFlags;
+import edu.wpi.first.wpilibj.SPI;
 
 public class Robot extends TimedRobot {
 
   private Joystick stick;
   private final Timer mytimer = new Timer();
-  private VictorSPX motorFrontL, motorFrontR, motorBackL, motorBackR, elevator, intake; 
+  private TalonSRX elevator, intake; 
+  private TalonSRX FrontL, FrontR, BackL, BackR;
   private VictorSP shooter;
   private double shooterSpeed = -0.65;
   private AHRS ahrs;
@@ -27,8 +29,11 @@ public class Robot extends TimedRobot {
   // + deg is right
   // - deg is left
   private AutonomousCommands[] autonomousIntakeChallenge = new AutonomousCommands[]{
-    new AutonomousCommands("move", 3.0),
-    new AutonomousCommands("turn", 90)
+    new AutonomousCommands("move", 150.0 + 21.0),
+    new AutonomousCommands("turn", -71),
+    new AutonomousCommands("move", 94.9 + 18.0),
+    new AutonomousCommands("turn", 98.2),
+    new AutonomousCommands("move", 134.2 + 21.0),
   };
   private int currentCommand;
   /**
@@ -41,19 +46,22 @@ public class Robot extends TimedRobot {
     stick = new Joystick(1);
 
     //DRIVING MOTORS
-    motorFrontR = new VictorSPX(0);
-    motorFrontL = new VictorSPX(1);
-    motorBackL = new VictorSPX(2);
-    motorBackR = new VictorSPX(3);
+    FrontR = new TalonSRX(3);
+    FrontL = new TalonSRX(1);
+    BackL = new TalonSRX(0);
+    BackR = new TalonSRX(2);
 
     //SHOOTER MOTOR
     shooter = new VictorSP(4);
 
     //ELEVATOR MOTOR
-    elevator = new VictorSPX(5);
+    elevator = new TalonSRX(4);
 
     //INTAKE MOTOR
-    intake = new VictorSPX(6);
+    intake = new TalonSRX(5);
+
+    //AHRS
+    ahrs = new AHRS(SPI.Port.kMXP); 
 
     //NETWORK TABLES
 
@@ -83,6 +91,8 @@ public class Robot extends TimedRobot {
   /** This function is run once each time the robot enters autonomous mode. */
   @Override
   public void autonomousInit() {
+    ahrs.zeroYaw();
+    FrontR.setSelectedSensorPosition(0.0);
     currentCommand = 0;
     mytimer.reset();
     mytimer.start();
@@ -91,45 +101,60 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    //change if statement to whatever length of array is
-    if(currentCommand < 2){
+    intake.set(ControlMode.PercentOutput, 0.40);
+    if(currentCommand < autonomousIntakeChallenge.length){
       if(autonomousIntakeChallenge[currentCommand].getCommandType() == "move"){
-        if(mytimer.get() >= 1.0){
-          currentCommand++;
-          mytimer.reset();
+        if(unitToDistance(FrontR.getSelectedSensorPosition()) < autonomousIntakeChallenge[currentCommand].getValue()){
+          moveMotors(0.3, 0.3);
         } else {
-          motorFrontL.set(ControlMode.PercentOutput, 0.2);
-          motorFrontR.set(ControlMode.PercentOutput, -0.2);
-          motorBackL.set(ControlMode.PercentOutput, 0.2);
-          motorBackR.set(ControlMode.PercentOutput, -0.2);
+          currentCommand++;
+          FrontR.setSelectedSensorPosition(0.0);
         }
       } else {
-        if(mytimer.get() >= 1.0){
-          currentCommand++;
-          mytimer.reset();
+        if(autonomousIntakeChallenge[currentCommand].getValue() > 0){
+          if(ahrs.getYaw() < autonomousIntakeChallenge[currentCommand].getValue()){
+            moveMotors(0.3, -0.3);
+          } else {
+            currentCommand++;
+            ahrs.zeroYaw();
+            FrontR.setSelectedSensorPosition(0.0);
+          }
         } else {
-          motorFrontL.set(ControlMode.PercentOutput, 0.2);
-          motorFrontR.set(ControlMode.PercentOutput, 0.2);
-          motorBackL.set(ControlMode.PercentOutput, 0.2);
-          motorBackR.set(ControlMode.PercentOutput, 0.2);
+         if(ahrs.getYaw() > autonomousIntakeChallenge[currentCommand].getValue()){
+            moveMotors(-0.3, 0.3);
+         } else {
+            currentCommand++;
+            ahrs.zeroYaw();
+            FrontR.setSelectedSensorPosition(0.0);
+          }
         }
       }
+    } else {
+      moveMotors(0, 0);
     }
   }
 
   /** This function is called once each time the robot enters teleoperated mode. */
   @Override
-  public void teleopInit() {}
+  public void teleopInit() {
+    FrontL.setSelectedSensorPosition(0.0);
+    mytimer.reset();
+    mytimer.start();
+  }
 
   /** This function is called periodically during teleoperated mode. */
   @Override
   public void teleopPeriodic() {
-
+    if(mytimer.get() > 0.5){
+      System.out.println("Distance Travelled: " + unitToDistance(FrontR.getSelectedSensorPosition()));
+      mytimer.reset();
+      mytimer.start();
+    }
     //SHOOTER -------------------------------------------------------------------------
     //R1 to shoot
     //Y to stop
     if (stick.getRawButton(6)){
-      shooter.set(shooterSpeed);
+      shooter.set(-0.70);
     }
     if(stick.getRawButton(4)){
       shooter.set(0);
@@ -137,13 +162,13 @@ public class Robot extends TimedRobot {
 
     //Using the D-PAD to control speed of shooter
     if(stick.getPOV() == 0){
-      shooterSpeed = -0.65;
+      shooterSpeed = -0.80;
     } else if(stick.getPOV() == 90){
-      shooterSpeed = -0.63;
+      shooterSpeed = -0.70;
     } else if(stick.getPOV() == 180){
-      shooterSpeed = -0.705;
+      shooterSpeed = -0.80;
     } else if(stick.getPOV() == 270){
-      shooterSpeed = -0.805;
+      shooterSpeed = -0.85;
     }
 
     //ELEVATOR ------------------------------------------------------------------------
@@ -192,10 +217,10 @@ public class Robot extends TimedRobot {
       }
     }
     
-    motorFrontL.set(ControlMode.PercentOutput, maxSpeedCheck(w[0] / (wMax*1.7 )));
-    motorFrontR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[1] / (wMax*1.7 )));
-    motorBackL.set(ControlMode.PercentOutput, maxSpeedCheck(w[2] / (wMax*1.7 )));
-    motorBackR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[3] / (wMax*1.7 )));
+    FrontL.set(ControlMode.PercentOutput, maxSpeedCheck(w[0] / (wMax*1.7 )));
+    FrontR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[1] / (wMax*1.7 )));
+    BackL.set(ControlMode.PercentOutput, maxSpeedCheck(w[2] / (wMax*1.7 )));
+    BackR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[3] / (wMax*1.7 )));
   }
 
   /** This function is called once each time the robot enters test mode. */
@@ -215,6 +240,13 @@ public class Robot extends TimedRobot {
   }
 
   public double unitToDistance(double pos){
-    return (pos/4096)/* * wheelCircumference */;
+    return (pos/4096) * (6.0 * Math.PI);
+  }
+
+  public void moveMotors(double left, double right){
+    FrontL.set(ControlMode.PercentOutput, left);
+    BackL.set(ControlMode.PercentOutput, left);
+    FrontR.set(ControlMode.PercentOutput, -1 * right);
+    BackR.set(ControlMode.PercentOutput, -1 * right);
   }
 }
