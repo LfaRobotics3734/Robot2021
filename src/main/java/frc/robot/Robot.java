@@ -34,35 +34,6 @@ public class Robot extends TimedRobot {
     new AutonomousCommands("move", 94.9 + 18.0),
     new AutonomousCommands("turn", 98.2),
     new AutonomousCommands("move", 134.2 + 21.0),
-    
-    /*This is the code which should work for the first autonomous challenge
-    new AutonomousCommands("move", 90.0 + 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 90.0 + 54.0),
-    new AutonomousCommands("turn", -90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", -90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", -90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", -90),
-    new AutonomousCommands("move", 60.0 + 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 54.0),
-    new AutonomousCommands("turn", 90),
-    new AutonomousCommands("move", 240.0 + 54.0),
-    The "+ 54" is accounting for what I assume is the robot's length
-    */
   };
   private int currentCommand;
   /**
