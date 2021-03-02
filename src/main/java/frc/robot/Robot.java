@@ -112,6 +112,22 @@ public class Robot extends TimedRobot {
             if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
               moveMotors(-0.1, -0.1);
             } else {
+            //assuming all commands go move,turn,move,turn,etc.
+            //Supposedly, this would adjust the values after 0.5 seconds of SLIIIIIIIIIIIIIDe
+            /*double ht = Math.asin(autonomousIntakeChallenge[currentCommand+1].getValue()) * autonomousIntakeChallenge[currentCommand+2].getValue();
+            double w = Math.pow(Math.pow(autonomousIntakeChallenge[currentCommand+2].getValue(),2) - Math.pow(ht,2), 0.5)
+            double newht = ht - (unitToDistance(FrontR.getSelectedSensorPosition()) - autonomousIntakeChallenge[currentCommand].getValue());
+            double hyp = Math.pow(Math.pow(newht,2) + Math.pow(w,2), 0.5);
+            double newAng = Math.sin(newht/hyp);
+            if(autonomousIntakeChallenge[currentCommand+1].getValue() > 90 || autonomousIntakeChallenge[currentCommand+1].getValue() < -90){
+              if(newAng > 90){
+                newAng = 180 - newAng;
+              }
+              if(newAng < -90){
+                newAng = -180 - newAng;
+              }
+            autonomousIntakeChallenge[currentCommand+1] = new autonomousCommands("turn", newAng);
+            autonomousIntakeChallenge[currentCommand+2] = new autonomousCommands("move", hyp);*/
             currentCommand++;
             FrontR.setSelectedSensorPosition(0.0);
             }
