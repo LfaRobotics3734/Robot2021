@@ -107,25 +107,44 @@ public class Robot extends TimedRobot {
         if(unitToDistance(FrontR.getSelectedSensorPosition()) < autonomousIntakeChallenge[currentCommand].getValue()){
           moveMotors(0.3, 0.3);
         } else {
-          currentCommand++;
-          FrontR.setSelectedSensorPosition(0.0);
+          myTimer.reset();
+          if(myTimer.get() > 0.5){
+            if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
+              moveMotors(-0.1, -0.1);
+            } else {
+            currentCommand++;
+            FrontR.setSelectedSensorPosition(0.0);
+            }
+          }
         }
       } else {
         if(autonomousIntakeChallenge[currentCommand].getValue() > 0){
           if(ahrs.getYaw() < autonomousIntakeChallenge[currentCommand].getValue()){
             moveMotors(0.3, -0.3);
           } else {
+            myTimer.reset();
+          if(myTimer.get() > 0.5){
+            if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
+              moveMotors(-0.1, -0.1);
+            } else {
             currentCommand++;
             ahrs.zeroYaw();
             FrontR.setSelectedSensorPosition(0.0);
+            }
           }
         } else {
          if(ahrs.getYaw() > autonomousIntakeChallenge[currentCommand].getValue()){
             moveMotors(-0.3, 0.3);
          } else {
+            myTimer.reset();
+          if(myTimer.get() > 0.5){
+            if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
+              moveMotors(-0.1, -0.1);
+            } else {
             currentCommand++;
             ahrs.zeroYaw();
             FrontR.setSelectedSensorPosition(0.0);
+            }
           }
         }
       }
