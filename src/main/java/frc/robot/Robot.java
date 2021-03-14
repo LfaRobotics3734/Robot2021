@@ -133,6 +133,11 @@ public class Robot extends TimedRobot {
           if(ahrs.getYaw() < autonomousIntakeChallenge[currentCommand].getValue()){
             moveMotors(0.2, -0.2);
           } else {
+            myTimer.reset();
+          if(myTimer.get() > 0.5){
+            if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
+              moveMotors(-0.1, -0.1);
+            } else {
             currentCommand++;
             ahrs.zeroYaw();
             FrontR.setSelectedSensorPosition(0.0);
@@ -143,6 +148,11 @@ public class Robot extends TimedRobot {
          if(ahrs.getYaw() > autonomousIntakeChallenge[currentCommand].getValue()){
             moveMotors(-0.2, 0.2);
          } else {
+            myTimer.reset();
+          if(myTimer.get() > 0.5){
+            if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
+              moveMotors(-0.1, -0.1);
+            } else {
             currentCommand++;
             ahrs.zeroYaw();
             FrontR.setSelectedSensorPosition(0.0);
