@@ -22,9 +22,8 @@ public class Robot extends TimedRobot {
   private VictorSP shooter;
   private double shooterSpeed = -0.65;
   private AHRS ahrs;
-
   private double distance;
-  private int orientation;
+  private double orientation;
   //if turn:
   // + deg is right
   // - deg is left
@@ -100,7 +99,7 @@ public class Robot extends TimedRobot {
     //add an entry listener for changed values of "Y", the lambda ("->" operator)
     //defines the code that should run when "Y" changes
     orientationEntry.addListener(event -> {
-        orientation=Integer.parseInt(event.value.getValue().toString());
+        orientation=Double.parseDouble(event.value.getValue().toString());
     }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
   }
 
@@ -110,13 +109,27 @@ public class Robot extends TimedRobot {
     ahrs.zeroYaw();
     FrontR.setSelectedSensorPosition(0.0);
     mytimer.start();
-    currentCommand = 0;
+    currentCommand = -1;
+    if(orientation>0){
+      currentCommand=1;
+    }
+    else if(orientation<0){
+      currentCommand=0;
+    }
+    
   }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    System.out.println(unitToDistance(FrontR.getSelectedSensorPosition()));
+      if(currentCommand == 0){
+        moveMotors(0.5, -0.5);
+      } else if(currentCommand == 1){
+        moveMotors(-0.5, 0.5);
+      }
+    
+    
+    /*System.out.println(unitToDistance(FrontR.getSelectedSensorPosition()));
     if(currentCommand < autonomousIntakeChallenge.length){
       if(autonomousIntakeChallenge[currentCommand].getCommandType() == "move"){
         if(unitToDistance(FrontR.getSelectedSensorPosition()) < autonomousIntakeChallenge[currentCommand].getValue()){
@@ -133,8 +146,8 @@ public class Robot extends TimedRobot {
           if(ahrs.getYaw() < autonomousIntakeChallenge[currentCommand].getValue()){
             moveMotors(0.2, -0.2);
           } else {
-            myTimer.reset();
-          if(myTimer.get() > 0.5){
+            mytimer.reset();
+          if(mytimer.get() > 0.5){
             if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
               moveMotors(-0.1, -0.1);
             } else {
@@ -148,8 +161,8 @@ public class Robot extends TimedRobot {
          if(ahrs.getYaw() > autonomousIntakeChallenge[currentCommand].getValue()){
             moveMotors(-0.2, 0.2);
          } else {
-            myTimer.reset();
-          if(myTimer.get() > 0.5){
+            mytimer.reset();
+          if(mytimer.get() > 0.5){
             if(unitToDistance(FrontR.getSelectedSensorPosition()) > autonomousIntakeChallenge[currentCommand].getValue()+ 0.5){
               moveMotors(-0.1, -0.1);
             } else {
@@ -163,7 +176,7 @@ public class Robot extends TimedRobot {
       }
     } else {
       moveMotors(0, 0);
-    }
+    }*/
   }
 
   /** This function is called once each time the robot enters teleoperated mode. */
@@ -178,6 +191,7 @@ public class Robot extends TimedRobot {
     //SHOOTER -------------------------------------------------------------------------
     //R1 to shoot
     //Y to stop
+    System.out.println(distance);
     if (stick.getRawButton(6)){
       shooter.set(shooterSpeed);
     }
@@ -212,6 +226,7 @@ public class Robot extends TimedRobot {
       belt.set(ControlMode.PercentOutput, 0.35);
     } else if (stick.getRawButton(2)) {
       intake.set(ControlMode.PercentOutput, -0.40);
+      belt.set(ControlMode.PercentOutput, -0.35);
     } else {
       intake.set(ControlMode.PercentOutput, 0);
       belt.set(ControlMode.PercentOutput, 0);
