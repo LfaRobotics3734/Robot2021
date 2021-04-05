@@ -24,6 +24,7 @@ public class Robot extends TimedRobot {
   private AHRS ahrs;
   private double distance;
   private String orientation;
+  private boolean shooting = false;
   //if turn:
   // + deg is right
   // - deg is left
@@ -160,8 +161,9 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    intake.set(ControlMode.PercentOutput, 0.4);
-    System.out.println(unitToDistance(FrontR.getSelectedSensorPosition()));
+    /*
+  intake.set(ControlMode.PercentOutput, 0.4);
+  System.out.println(unitToDistance(FrontR.getSelectedSensorPosition()));
    if(currentCommand < autonomousIntakeChallenge.length){
       if(autonomousIntakeChallenge[currentCommand].getCommandType() == "move"){
         if(unitToDistance(FrontR.getSelectedSensorPosition()) < autonomousIntakeChallenge[currentCommand].getValue()){
@@ -200,26 +202,31 @@ public class Robot extends TimedRobot {
     } else {
       moveMotors(0, 0);
     } 
+    */
+    if(unitToDistance(FrontR.getSelectedSensorPosition()) < 60.0){
+      moveMotors(0.4,0.4);
+    } else {
+      moveMotors(0,0);
+    }
   }
 
   /** This function is called once each time the robot enters teleoperated mode. */
   @Override
   public void teleopInit() {
     FrontL.setSelectedSensorPosition(0.0);
+    shooting = false;
   }
 
   /** This function is called periodically during teleoperated mode. */
   @Override
   public void teleopPeriodic() {
     //SHOOTER -------------------------------------------------------------------------
-    //R1 to shoot
-    //Y to stop
-    System.out.println(distance);
-    if (stick.getRawButton(6)){
-      shooter.set(shooterSpeed);
-    }
+    //Y to start and stop shooter
     if(stick.getRawButton(4)){
-      shooter.set(0);
+        shooter.set(0);
+    }
+    if(stick.getRawButton(6)){
+        shooter.set(shooterSpeed);
     }
 
     //Using the D-PAD to control speed of shooter
@@ -256,60 +263,62 @@ public class Robot extends TimedRobot {
     }
 
     //DRIVING CODE --------------------------------------------------------------------
-    double x = 0, y = 0, z = 0;
-
-    if (!(stick.getX() < 0.2 && stick.getX() > -0.2)) {
-      z = stick.getX();
-    }
-    if (!(stick.getY() < 0.2 && stick.getY() > -0.2)) {
-      x = -stick.getY();
-    }
-    if (!(stick.getRawAxis(4) < 0.2 && stick.getRawAxis(4) > -0.2)) {
-      y = stick.getRawAxis(4);
-    }
-
-    double[] w = new double[4];
-    w[0] = x + y + z;
-    w[1] = x - y - z;
-    w[2] = x - y + z;
-    w[3] = x + y - z;
-
-    double wMax = 1;
-
-    for (int i = 0; i < 4; i++) {
-      if (w[i] > wMax) {
-        wMax = w[i];
-      }
-    }
     
-    FrontL.set(ControlMode.PercentOutput, maxSpeedCheck(w[0] / (wMax*1.7 )));
-    FrontR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[1] / (wMax*1.7 )));
-    BackL.set(ControlMode.PercentOutput, maxSpeedCheck(w[2] / (wMax*1.7 )));
-    BackR.set(ControlMode.PercentOutput, -maxSpeedCheck(w[3] / (wMax*1.7 )));
+    if(stick.getRawAxis(2) > 0.3 || stick.getRawAxis(3) > 0.3){
+      if(stick.getRawAxis(3) > 0.3){
+        //right
+        FrontR.set(ControlMode.PercentOutput,0.3);
+        BackR.set(ControlMode.PercentOutput,-0.3);
+        BackL.set(ControlMode.PercentOutput,-0.3);
+        FrontL.set(ControlMode.PercentOutput,0.3);
+      } else if(stick.getRawAxis(2) > 0.3){
+        //left strafe
+        FrontR.set(ControlMode.PercentOutput,-0.3);
+        BackR.set(ControlMode.PercentOutput,0.3);
+        BackL.set(ControlMode.PercentOutput,0.3);
+        FrontL.set(ControlMode.PercentOutput,-0.3);
+      } else {
+        moveMotors(0,0);
+      }
+    } else {
+
+      if(stick.getRawAxis(1) < 0.2 && stick.getRawAxis(1) > -0.2){
+        if(stick.getRawAxis(4) < 0.2 && stick.getRawAxis(4) > -0.2){
+          moveMotors(0,0);
+        } else {
+          moveMotors(stick.getRawAxis(4) * 0.5, -stick.getRawAxis(4) * 0.5);
+        }
+      } else {
+        double speed = stick.getRawAxis(1) * -0.6;
+        if(stick.getRawAxis(4) < 0.2 && stick.getRawAxis(4) > -0.2){
+          moveMotors(speed, speed);
+        } else {
+          if(stick.getRawAxis(4) > 0){
+            //right
+            double newSpeed = speed - (speed * stick.getRawAxis(4));
+            moveMotors(speed, newSpeed);
+          } else {
+            //left
+            double newSpeed = speed - (speed * Math.abs(stick.getRawAxis(4)));
+            moveMotors(newSpeed, speed);
+          }
+        }
+      }  
+    }
+
 
   }
 
   /** This function is called once each time the robot enters test mode. */
   @Override
   public void testInit() {
-    mytimer.reset();
-    mytimer.start();
+
   }
 
   /** This function is called periodically during test mode. */
   @Override
   public void testPeriodic() {
-    if(mytimer.get() < 15.0){
-      accelerate(0.5, mytimer);
-    }
-  }
-
-  public double maxSpeedCheck(double inputSpeed) {
-    if (inputSpeed > 1) {
-      return 1.0;
-    } else {
-      return inputSpeed;
-    }
+    FrontR.set(ControlMode.PercentOutput, 0.2);
   }
 
   public double unitToDistance(double pos){
@@ -328,7 +337,7 @@ public class Robot extends TimedRobot {
   public void moveMotors(double left, double right){
     FrontL.set(ControlMode.PercentOutput, left);
     BackL.set(ControlMode.PercentOutput, left);
-    FrontR.set(ControlMode.PercentOutput, -1.035 * right);
-    BackR.set(ControlMode.PercentOutput, -1.035 * right);
+    FrontR.set(ControlMode.PercentOutput, -1 * right);
+    BackR.set(ControlMode.PercentOutput, -1 * right);
   }
 }
